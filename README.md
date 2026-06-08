@@ -119,3 +119,14 @@ python -m pytest tests/ -q
 MIT — see [LICENSE](LICENSE).
 
 Built by [Nous Research](https://nousresearch.com).
+
+---
+
+## OmniSenter as the auxiliary
+
+`agent/auxiliary_client.py` is the integration point for **OmniSenter** as an auxiliary LLM to Hermes Agent. The full architecture:
+- OmniSenter is a 32B-A8B MoE (multimodal + agentic + self-evolving)
+- It runs in front of Hermes as a context curator
+- Handles trivial/plugin-friendly requests directly, escalates to Hermes with a structured notebook when needed
+- Lives at `SouthpawIN/evolutionary-training` (main project)
+- Design post: [OmniSenter: The Self-Evolving Multimodal Auxiliary for Hermes](https://github.com/SouthpawIN/evolutionary-training/blob/master/blog/omnisenter-self-evolving.md)
