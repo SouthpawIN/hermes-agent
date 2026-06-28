@@ -183,6 +183,10 @@ class DistributionManifest:
     # ``list`` can show when a distribution landed on disk.  Empty for
     # manifests that ship in a repo (authors don't populate this).
     installed_at: str = ""
+    # Optional metadata from the distribution.yaml — used as fallback
+    # for update_source when source is not set.
+    repo: str = ""
+    homepage: str = ""
 
     @classmethod
     def from_dict(cls, data: Any) -> "DistributionManifest":
@@ -212,6 +216,8 @@ class DistributionManifest:
             distribution_owned=distribution_owned,
             source=str(data.get("source") or ""),
             installed_at=str(data.get("installed_at") or ""),
+            repo=str(data.get("repo") or ""),
+            homepage=str(data.get("homepage") or ""),
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -685,13 +691,15 @@ def install_distribution(
 def update_distribution(
     profile_name: str,
     force_config: bool = False,
+    source: Optional[str] = None,
 ) -> InstallPlan:
     """Re-pull the distribution for an existing profile and apply updates.
 
     The source is read from the installed profile's ``distribution.yaml``
-    ``source:`` field.  Distribution-owned files are overwritten; user-owned
-    data (memories, sessions, auth) is never touched.  ``config.yaml`` is
-    preserved unless ``force_config`` is True.
+    ``source:`` field, or from the *source* argument if the manifest doesn't
+    have one.  Distribution-owned files are overwritten; user-owned data
+    (memories, sessions, auth) is never touched.  ``config.yaml`` is preserved
+    unless ``force_config`` is True.
     """
     from hermes_cli.profiles import (
         get_profile_dir,
@@ -711,15 +719,23 @@ def update_distribution(
             f"Profile '{canon}' is not a distribution (no {MANIFEST_FILENAME}). "
             "Only profiles installed via `hermes profile install` can be updated."
         )
-    if not existing_manifest.source:
+
+    # Use explicit source if provided, otherwise fall back to manifest's source,
+    # then to repo/homepage fields as last resort
+    update_source = source or existing_manifest.source
+    if not update_source:
+        # Try repo or homepage fields as fallback
+        update_source = getattr(existing_manifest, 'repo', None) or \
+                        getattr(existing_manifest, 'homepage', None)
+    if not update_source:
         raise DistributionError(
             f"Profile '{canon}' has no recorded source.  Re-install with "
-            "`hermes profile install <source> --name {canon} --force`."
+            f"`hermes profile install <source> --name {canon} --force`."
         )
 
     with tempfile.TemporaryDirectory(prefix="hermes_dist_update_") as tmp:
         plan = plan_install(
-            existing_manifest.source,
+            update_source,
             Path(tmp),
             override_name=canon,
         )
