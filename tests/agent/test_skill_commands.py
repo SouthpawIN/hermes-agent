@@ -28,6 +28,20 @@ description: Description for {name}.
 
 
 class TestScanSkillCommands:
+    def test_bundled_hermes_skill_uses_ask_hermes_public_command(self):
+        """The Hermes guidance skill is exposed as the descriptive /ask-hermes command."""
+        skill_path = (
+            Path(__file__).resolve().parents[2]
+            / "skills"
+            / "autonomous-ai-agents"
+            / "hermes-agent"
+            / "SKILL.md"
+        )
+        content = skill_path.read_text(encoding="utf-8")
+
+        assert "name: ask-hermes" in content
+        assert "name: hermes-agent" not in content
+
     def test_finds_skills(self, tmp_path):
         with patch("tools.skills_tool.SKILLS_DIR", tmp_path):
             _make_skill(tmp_path, "my-skill")
